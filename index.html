@@ -430,6 +430,12 @@
     // Cloud layer for Mercury (thin atmosphere visualization)
     // -------------------------------------------------------------------------
     let mercuryCloudLayer = null;
+    // Store core labels for visibility toggling
+    const coreLabels = [];
+    // Objects that can occlude core labels (e.g., crust hemisphere)
+    const occluders = [];
+    // One raycaster reused each frame for occlusion checks
+    const raycaster = new THREE.Raycaster();
     
     function createMercuryCloudLayer() {
       if (mercuryCloudLayer) return; // already created
@@ -459,6 +465,9 @@
       });
       const crust = new THREE.Mesh(crustGeometry, crustMaterial);
       mercuryCloudLayer.add(crust);
+      // Use crust hemisphere as occluder for label visibility
+      occluders.length = 0;
+      occluders.push(crust);
       
       // 2. Middle - Liquid Outer Core (bright orange) - hemisphere
       const outerCoreGeometry = new THREE.SphereGeometry(1.8, performanceSettings.sphereDetail, performanceSettings.sphereDetail, phiStart, phiLength);
@@ -469,6 +478,28 @@
       const outerCore = new THREE.Mesh(outerCoreGeometry, outerCoreMaterial);
       mercuryCloudLayer.add(outerCore);
       
+      // Add Crust label to the orange part
+      const crustDiv = document.createElement('div');
+      crustDiv.className = 'orbit-label';
+      crustDiv.innerHTML = '<i class="fa-solid fa-star" style="margin-right:4px;"></i>Crust';
+      crustDiv.style.padding = '4px 8px';
+      crustDiv.style.borderRadius = '4px';
+      const crustLabel = new CSS2DObject(crustDiv);
+      crustLabel.position.set(-1.9, 0.8, 0); // Position on the orange layer
+      outerCore.add(crustLabel);
+      coreLabels.push(crustLabel); // Add to tracking array
+      
+      // Add Mantle label to the orange part
+      const mantleDiv = document.createElement('div');
+      mantleDiv.className = 'orbit-label';
+      mantleDiv.innerHTML = '<i class="fa-solid fa-star" style="margin-right:4px;"></i>Mantle';
+      mantleDiv.style.padding = '4px 8px';
+      mantleDiv.style.borderRadius = '4px';
+      const mantleLabel = new CSS2DObject(mantleDiv);
+      mantleLabel.position.set(-1.7, 0, 0); // Position on the orange layer
+      outerCore.add(mantleLabel);
+      coreLabels.push(mantleLabel); // Add to tracking array
+      
       // 1. Innermost - Solid Inner Core (bright red) - hemisphere
       const innerCoreGeometry = new THREE.SphereGeometry(1.4, performanceSettings.sphereDetail, performanceSettings.sphereDetail, phiStart, phiLength);
       const innerCoreMaterial = new THREE.MeshBasicMaterial({ 
@@ -478,6 +509,17 @@
       const innerCore = new THREE.Mesh(innerCoreGeometry, innerCoreMaterial);
       mercuryCloudLayer.add(innerCore);
       
+      // Add Nucleus label to the inner core
+      const nucleusDiv = document.createElement('div');
+      nucleusDiv.className = 'orbit-label';
+      nucleusDiv.innerHTML = '<i class="fa-solid fa-star" style="margin-right:4px;"></i>Nucleus';
+      nucleusDiv.style.padding = '4px 8px';
+      nucleusDiv.style.borderRadius = '4px';
+      const nucleusLabel = new CSS2DObject(nucleusDiv);
+      nucleusLabel.position.set(-0.7, 0, 0); // Position on the inner core
+      innerCore.add(nucleusLabel);
+      coreLabels.push(nucleusLabel); // Add to tracking array
+      
       // Position the core group at Mercury's center
       mercuryCloudLayer.position.copy(mercury.position);
       
@@ -485,6 +527,11 @@
       mercuryCloudLayer.rotation.y = Math.PI;
       
       scene.add(mercuryCloudLayer);
+
+      // Move camera to a straight-on frontal view for the cut-away
+      camera.position.set(0, 0, 8);
+      controls.target.set(0, 0, 0);
+      controls.update();
       
       console.log("Mercury layered structure created with", mercuryCloudLayer.children.length, "layers: textured crust, liquid outer core, solid inner core");
       console.log("mercuryCloudLayer object:", mercuryCloudLayer);
@@ -494,10 +541,19 @@
       if (mercuryCloudLayer) {
         // Remove all children and dispose of geometries/materials
         mercuryCloudLayer.traverse((child) => {
+          // Clean up CSS2D labels
+          if (child instanceof CSS2DObject) {
+            if (child.element && child.element.parentNode) {
+              child.element.parentNode.removeChild(child.element);
+            }
+          }
           if (child.geometry) child.geometry.dispose();
           if (child.material) child.material.dispose();
         });
         scene.remove(mercuryCloudLayer);
+        // Clear tracked labels and occluders
+        coreLabels.length = 0;
+        occluders.length = 0;
         mercuryCloudLayer = null;
         
         // Restore Mercury's visibility
@@ -506,6 +562,14 @@
         // Resume Mercury rotation
         rotationPaused = false;
         
+        // Hide core labels
+        coreLabels.forEach(label => label.element.style.display = 'none');
+        
+        // Restore camera position and target
+        camera.position.set(0, 4, 6);
+        controls.target.set(0, 0, 0);
+        controls.update();
+
         console.log("Mercury layered core structure removed");
       }
     }
@@ -714,6 +778,24 @@
 
       if (controls.enabled) {
         controls.update();
+      }
+
+      // Toggle core labels based on visibility (facing camera)
+      // Occlusion-based label visibility (hide when blocked by crust)
+      if (coreLabels.length && occluders.length) {
+        coreLabels.forEach(labelObj => {
+          const worldPos = new THREE.Vector3();
+          labelObj.getWorldPosition(worldPos);
+          const dir = worldPos.clone().sub(camera.position).normalize();
+          raycaster.set(camera.position, dir);
+          const distance = camera.position.distanceTo(worldPos);
+          const intersects = raycaster.intersectObjects(occluders, true);
+          let visible = true;
+          if (intersects.length && intersects[0].distance < distance - 0.03) {
+            visible = false; // Label is behind crust
+          }
+          labelObj.visible = visible;
+        });
       }
       renderer.render(scene, camera);
       labelRenderer.render(scene, camera);
