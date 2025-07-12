@@ -434,32 +434,79 @@
     function createMercuryCloudLayer() {
       if (mercuryCloudLayer) return; // already created
       
-      // Scale down Mercury for better view of cloud effect
-      mercury.scale.set(0.7, 0.7, 0.7);
+      console.log("Creating Mercury's layered core structure");
       
-      // Create a slightly larger sphere to represent the thin atmosphere
-      const cloudGeometry = new THREE.SphereGeometry(1.8, performanceSettings.sphereDetail, performanceSettings.sphereDetail);
-      const cloudMaterial = new THREE.MeshBasicMaterial({
-        color: 0x666666, // grayish color for Mercury's thin atmosphere
-        transparent: true,
-        opacity: 0.2,
+      // Create Mercury's internal structure with nested transparent spheres
+      // Each layer gets progressively smaller and different color
+      
+      mercuryCloudLayer = new THREE.Group();
+      
+      // Hide Mercury completely to see the cores clearly
+      mercury.visible = false;
+      
+      // Pause Mercury rotation to keep it static
+      rotationPaused = true;
+      
+      // Create hemisphere cutaway to show all layers like the scientific diagram
+      const phiStart = 0;
+      const phiLength = 3 * Math.PI / 2; // 3/4 sphere for cutaway effect (270 degrees)
+      
+      // 3. Outermost - Mercury Surface/Crust (textured) - hemisphere
+      const crustGeometry = new THREE.SphereGeometry(2.2, performanceSettings.sphereDetail, performanceSettings.sphereDetail, phiStart, phiLength);
+      const crustMaterial = new THREE.MeshStandardMaterial({ 
+        map: mercuryTexture, // Use Mercury's actual surface texture
         side: THREE.DoubleSide
       });
+      const crust = new THREE.Mesh(crustGeometry, crustMaterial);
+      mercuryCloudLayer.add(crust);
       
-      mercuryCloudLayer = new THREE.Mesh(cloudGeometry, cloudMaterial);
+      // 2. Middle - Liquid Outer Core (bright orange) - hemisphere
+      const outerCoreGeometry = new THREE.SphereGeometry(1.8, performanceSettings.sphereDetail, performanceSettings.sphereDetail, phiStart, phiLength);
+      const outerCoreMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xff9933, // Bright orange
+        side: THREE.DoubleSide
+      });
+      const outerCore = new THREE.Mesh(outerCoreGeometry, outerCoreMaterial);
+      mercuryCloudLayer.add(outerCore);
+      
+      // 1. Innermost - Solid Inner Core (bright red) - hemisphere
+      const innerCoreGeometry = new THREE.SphereGeometry(1.4, performanceSettings.sphereDetail, performanceSettings.sphereDetail, phiStart, phiLength);
+      const innerCoreMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xff3333, // Bright red
+        side: THREE.DoubleSide
+      });
+      const innerCore = new THREE.Mesh(innerCoreGeometry, innerCoreMaterial);
+      mercuryCloudLayer.add(innerCore);
+      
+      // Position the core group at Mercury's center
       mercuryCloudLayer.position.copy(mercury.position);
+      
+      // Rotate 180 degrees to show a different view of the internal structure
+      mercuryCloudLayer.rotation.y = Math.PI;
+      
       scene.add(mercuryCloudLayer);
+      
+      console.log("Mercury layered structure created with", mercuryCloudLayer.children.length, "layers: textured crust, liquid outer core, solid inner core");
+      console.log("mercuryCloudLayer object:", mercuryCloudLayer);
     }
     
     function removeMercuryCloudLayer() {
       if (mercuryCloudLayer) {
+        // Remove all children and dispose of geometries/materials
+        mercuryCloudLayer.traverse((child) => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) child.material.dispose();
+        });
         scene.remove(mercuryCloudLayer);
-        mercuryCloudLayer.geometry.dispose();
-        mercuryCloudLayer.material.dispose();
         mercuryCloudLayer = null;
         
-        // Restore Mercury to original size
-        mercury.scale.set(1, 1, 1);
+        // Restore Mercury's visibility
+        mercury.visible = true;
+        
+        // Resume Mercury rotation
+        rotationPaused = false;
+        
+        console.log("Mercury layered core structure removed");
       }
     }
 
@@ -557,7 +604,10 @@
 
       // Remove cloud layer if not selecting fire/info
       if (selectedKey !== 'fire') {
+        console.log("Removing cloud layer because selectedKey is:", selectedKey);
         removeMercuryCloudLayer();
+      } else {
+        console.log("NOT removing cloud layer because selectedKey is 'fire'");
       }
 
       // Remove calendar UI if not selecting calendar
@@ -597,7 +647,7 @@
     // Facts and menu interactivity
     // -------------------------------------------------------------------------
     const facts = {
-      fire: "Mercury experiences extreme temperature variations, from 800°F (427°C) during the day to -290°F (-179°C) at night due to its lack of atmosphere.",
+      fire: "Mercury's internal structure: textured surface crust, massive iron core (75% radius), with liquid outer core and solid inner core. The core dominates the planet's interior.",
       rotation: "Slow rotation: Mercury takes 59 Earth days to complete one rotation, but only 88 Earth days to orbit the Sun.",
       calendar: "Orbital period: Mercury takes only 88 Earth days to orbit the Sun (a Mercurian year), making it the fastest orbiting planet.",
       earth: "Size comparison: Mercury diameter ≈ 4,879 km, about 2/5 the size of Earth, making it the smallest planet in our solar system."
@@ -629,6 +679,7 @@
         } else if (key === 'earth') {
           createEarth();
         } else if (key === 'fire') {
+          console.log("Fire icon clicked, calling createMercuryCloudLayer");
           createMercuryCloudLayer();
         } else if (key === 'calendar') {
           createCalendarUI();
@@ -648,10 +699,12 @@
         mercury.rotation.y += 0.005 / 59; // Mercury rotates prograde (same direction as Earth)
       }
 
-      // Cloud layer rotation - slightly different speed to create atmospheric effect
+      // Animate Mercury's core layers if visible (and not paused)
       if (mercuryCloudLayer) {
-        mercuryCloudLayer.rotation.y += 0.01; // faster rotation for dynamic cloud effect
-        mercuryCloudLayer.position.copy(mercury.position); // follow Mercury position
+        if (!rotationPaused) {
+          mercuryCloudLayer.rotation.y += 0.002; // Slow rotation of core layers
+        }
+        mercuryCloudLayer.position.copy(mercury.position); // Follow Mercury position
       }
 
       // Earth prograde rotation - normal speed
