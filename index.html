@@ -783,6 +783,10 @@
       // Toggle core labels based on visibility (facing camera)
       // Occlusion-based label visibility (hide when blocked by crust)
       if (coreLabels.length && occluders.length) {
+        const center = new THREE.Vector3(0, 0, 0);
+        const camDir = camera.position.clone().sub(center).normalize();
+        const withinEquator = Math.abs(camDir.y) < 0.95; // Hide labels when viewing near poles (about 72° from equator)
+
         coreLabels.forEach(labelObj => {
           const worldPos = new THREE.Vector3();
           labelObj.getWorldPosition(worldPos);
@@ -790,8 +794,8 @@
           raycaster.set(camera.position, dir);
           const distance = camera.position.distanceTo(worldPos);
           const intersects = raycaster.intersectObjects(occluders, true);
-          let visible = true;
-          if (intersects.length && intersects[0].distance < distance - 0.03) {
+          let visible = withinEquator;
+          if (visible && intersects.length && intersects[0].distance < distance - 0.03) {
             visible = false; // Label is behind crust
           }
           labelObj.visible = visible;
