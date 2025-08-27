@@ -581,13 +581,13 @@
       if (earthMesh) return;
 
       // Shift Mercury left first so positions are set before rendering
-      mercury.position.set(-4.5, 0, 0);
+      mercury.position.set(-7.0, 0, 0);
 
       // Earth is 2.6 times larger than Mercury (12,742 km vs 4,879 km diameter)
       const earthGeom = new THREE.SphereGeometry(5.2, performanceSettings.sphereDetail, performanceSettings.sphereDetail);
       const earthMat = new THREE.MeshStandardMaterial({ map: preloadedEarthTexture });
       earthMesh = new THREE.Mesh(earthGeom, earthMat);
-      earthMesh.position.set(3.5, 0, 0);
+      earthMesh.position.set(6.0, 0, 0);
       scene.add(earthMesh);
 
       // Zoom out camera to show both planets
