@@ -1,43 +1,42 @@
 # Updated Mercury Interactive
 
-This repository contains the code for the **Updated Mercury Interactive**, designed to help students explore and understand the characteristics and features of the planet Mercury through engaging visuals and instant feedback.
+Client-only WebGL interactive for Mercury: single `index.html` with an inline ES module and Three.js loaded via import map (no build step). Curriculum, NGSS alignment, and product links are in [`Standards.md`](Standards.md).
+
+**Production:** [https://content-interactives.github.io/updated-mercury](https://content-interactives.github.io/updated-mercury)
 
 ---
 
-## 🔗 Live Interactive
+## Architecture
 
-Try it out here:  
-👉 [https://content-interactives.github.io/updated-mercury](https://content-interactives.github.io/updated-mercury)
-
----
-
-## 🌐 Where This Interactive Is Being Used
-
-This interactive is currently featured in the following locations:
-
-- <img width="20" height="20" alt="image" src="https://github.com/user-attachments/assets/5d12571f-8e12-4441-98ab-c0bc94069a96" /> **CK-12 Intent Response**  
-  - 👉 PRODUCTION: [PENDING]  
-  - 👉 MASTER: [PENDING]
-- 📘 **CK-12 Flexbooks**  
-  - 👉 [PENDING: Book/lesson link where this interactive appears]
+| Layer | Implementation |
+|--------|----------------|
+| Rendering | `THREE.WebGLRenderer` + scene graph |
+| Modules | `importmap` → `three@0.162.0` and `three/addons/` from unpkg |
+| UI | HTML/CSS overlays, Font Awesome 6.5 (CDN) |
 
 ---
 
-## 📚 Standards & Subjects
+## Repository layout
 
-This interactive aligns with the following topics and standards:
-
-- **📂 Subject Area**: Middle School Science  
-- **🪐 Topic**: Mercury — Understanding the characteristics and features of the planet Mercury  
-- **📏 Next Generation Science Standards (NGSS)**:  
-  - **MS-ESS1-3** – Analyze and interpret data to determine scale properties of objects in the solar system.  
-  - **MS-ESS1-4** – Construct a scientific explanation based on evidence from rock strata for how the geologic time scale is used to organize Earth's 4.6-billion-year-old history.  
-  - **MS-ESS2-4** – Develop a model to describe the cycling of Earth's materials and the flow of energy that drives this process.
+| Path | Role |
+|------|------|
+| `index.html` | Shell, styles, main module script, import map |
+| `package.json` | `npx http-server -p 8083` for local dev |
+| `Flexi_Telescope.svg` | Branding asset |
 
 ---
 
-## 🛠️ Developer Notes
+## Local development
 
-- Built with: HTML  
-- Deployed via: GitHub Pages  
-- See `index.html` and supporting assets in `src/` and `public/` folders
+```bash
+npm install
+npm run dev
+```
+
+Serves on **8083**. Use HTTP, not `file://`.
+
+---
+
+## Deployment
+
+GitHub Pages or any static host; keep paths relative to repo root.
